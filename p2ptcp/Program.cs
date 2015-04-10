@@ -46,21 +46,11 @@ namespace p2ptcp
         var ipendpoint = args[1];
 
         Task.Delay(100).Wait();
-
         var ip = IPAddress.Parse(ipendpoint);
-        //var theirport = DEFAULT_PORT;//int.Parse(split[1]);
-        //var endpoint = new IPEndPoint(ip, theirport);
 
         tasks.Add(connect(ip));
       }
-      /*
-      else if (args.Length > 1)
-      {
-        Console.WriteLine(args[1]);
-        var ip = IPAddress.Parse(args[1]);
-        tasks.Add(connect(ip, DEFAULT_PORT));
-      }
-      */
+
       Task.WhenAll(tasks).Wait();
     }
 
@@ -80,7 +70,8 @@ namespace p2ptcp
 
         var endpoint = client.Client.RemoteEndPoint as IPEndPoint;
         //knownendpoints.Add(endpoint);
-        //var remoteip = endpoint.Address;
+        var remoteip = endpoint.Address;
+        remoteips.Add(remoteip.ToString());
         
         connectionlisteners.Add(handleConnection(client));
   
@@ -157,8 +148,10 @@ namespace p2ptcp
 
       sendmessage(client, WELCOME_CODE + remoteipaddress);
 
+      broadcast(USER_CODE + remoteipaddress);
 
-      
+      connections.Add(client);
+
       var rec = new List<string>();
       var buffer = new byte[4096];
       int len;
@@ -191,35 +184,29 @@ namespace p2ptcp
           }
           else if (code == USER_CODE)
           {
-            var split = body.Split(':');
             //var ip = IPAddress.Parse(body);
-            if (remoteips.Add(split[0])){
+            if (mIpAddress!=body && remoteips.Add(body)){
               
-              var ip = IPAddress.Parse(split[0]);
+              var ip = IPAddress.Parse(body);
               var theirport = DEFAULT_PORT;
               var endpt = new IPEndPoint(ip, theirport);
               connect(endpoint.Address);
-              //var match2 = connections.Where(x => ((IPEndPoint)(x.Client.RemoteEndPoint)).Address == ip).FirstOrDefault();
-              /*
-              if (endpt.Address != myipaddress.Address && endpt.Port != myipaddress.Port)
-              {
-                Console.WriteLine("learned about: " + body);
-                connect(endpt);
-              }
-               * */
+         
             }
           }
           else if (code == WELCOME_CODE)
           {
-            sendmessage(client, PORT_CODE + mPort.ToString());
+            //sendmessage(client, PORT_CODE + mPort.ToString());
           }
           else if (code == PORT_CODE)
           {
+            /*
             remotelistenport = int.Parse(body);
             string remoteendpoint = endpoint.Address.ToString();// + ":" + DEFAULT_PORT;
             remoteips.Add(remoteendpoint);
             broadcast(USER_CODE + remoteendpoint);
             connections.Add(client);
+             * */
             
           }
 
