@@ -129,6 +129,7 @@ namespace p2ptcp
           var ip = IPAddress.Parse(body);
           var match = connections.Where(x => ((IPEndPoint)(x.Client.RemoteEndPoint)).Address == ip).FirstOrDefault();
           if (match == null){
+            Console.WriteLine("connecting to " + body);
             connect(ip, DEFAULT_PORT);
           }
         }
