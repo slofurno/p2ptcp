@@ -70,10 +70,15 @@ namespace p2ptcp
     static async Task connect(IPAddress ip, int port)
     {
       TcpClient client = new TcpClient();
-      
-      client.Connect(ip, port);
-      connections.Add(client);
-      connectionlisteners.Add(handleConnection(client));
+      try
+      {
+        client.Connect(ip, port);
+        connections.Add(client);
+        connectionlisteners.Add(handleConnection(client));
+      }
+      catch(Exception e){
+        Console.WriteLine("failed to connect with error " + e.Message);
+      }
 
     }
 
