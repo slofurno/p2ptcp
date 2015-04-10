@@ -22,6 +22,9 @@ namespace p2ptcp
 
     static void Main(string[] args)
     {
+
+      Console.WriteLine(args[0]);
+      Console.WriteLine(args[1]);
       //args : name iptoconnectto
       var tasks = new List<Task>();
 
