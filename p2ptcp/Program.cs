@@ -89,6 +89,7 @@ namespace p2ptcp
         if (remoteips.Add(ip.ToString()))
         {
           TcpClient client = new TcpClient();
+          client.SendTimeout = 1000;
           await client.ConnectAsync(ip, DEFAULT_PORT);
           //connections.Add(client);
           connectionlisteners.Add(handleConnection(client));
@@ -142,9 +143,8 @@ namespace p2ptcp
       int remotelistenport = 0;
       var endpoint = client.Client.RemoteEndPoint as IPEndPoint;
       var remoteipaddress = endpoint.Address.ToString();
-      var stringpoint = endpoint.ToString();
 
-      Console.WriteLine("client connected : " + stringpoint);
+      Console.WriteLine("client connected : " + remoteipaddress);
 
       sendmessage(client, WELCOME_CODE + remoteipaddress);
 
@@ -188,9 +188,7 @@ namespace p2ptcp
             if (mIpAddress!=body && remoteips.Add(body)){
               
               var ip = IPAddress.Parse(body);
-              var theirport = DEFAULT_PORT;
-              var endpt = new IPEndPoint(ip, theirport);
-              connect(endpoint.Address);
+              connect(ip);
          
             }
           }
