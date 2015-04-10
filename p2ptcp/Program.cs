@@ -14,13 +14,18 @@ namespace p2ptcp
 
     static List<TcpClient> connections = new List<TcpClient>();
     static List<Task> connectionlisteners = new List<Task>();
-    static HashSet<IPAddress> knownips = new HashSet<IPAddress>();
-    static IPAddress myipaddress;
+    //static HashSet<IPEndPoint> knownendpoints = new HashSet<IPEndPoint>();
+    //static IPEndPoint myipaddress;
+
+    static HashSet<string>remoteips = new HashSet<string>();
     static int DEFAULT_PORT = 1278;
     static string name = "";
     static char MSG_CODE = (char)215;
     static char USER_CODE = (char)216;
     static char WELCOME_CODE = (char)217;
+    static char PORT_CODE = (char)218;
+    static int mPort = 0;
+    static string mIpAddress;
 
     static void Main(string[] args)
     {
@@ -31,19 +36,31 @@ namespace p2ptcp
       var tasks = new List<Task>();
 
       name = args[0];
-      //var port = int.Parse(args[1]);
-      tasks.Add(StartListening(DEFAULT_PORT));
 
-      Task.Delay(2000).Wait();
+      var myport = DEFAULT_PORT;//int.Parse(args[1]);
+      mPort = myport;
+      tasks.Add(StartListening(myport));
 
-      if (args.Length > 1)
+      if (args.Length > 2)
+      {
+        var ipendpoint = args[2];
+
+        Task.Delay(100).Wait();
+
+        var ip = IPAddress.Parse(ipendpoint);
+        //var theirport = DEFAULT_PORT;//int.Parse(split[1]);
+        //var endpoint = new IPEndPoint(ip, theirport);
+
+        tasks.Add(connect(ip));
+      }
+      /*
+      else if (args.Length > 1)
       {
         Console.WriteLine(args[1]);
         var ip = IPAddress.Parse(args[1]);
-        //var theirport = int.Parse(args[3]);
         tasks.Add(connect(ip, DEFAULT_PORT));
       }
-
+      */
       Task.WhenAll(tasks).Wait();
     }
 
@@ -62,45 +79,34 @@ namespace p2ptcp
         var client = await listener.AcceptTcpClientAsync().ConfigureAwait(false);
 
         var endpoint = client.Client.RemoteEndPoint as IPEndPoint;
-        var remoteip = endpoint.Address;
-
-        if (!knownips.Add(remoteip))
-        {
-          var match = connections.Where(x => ((IPEndPoint)(x.Client.RemoteEndPoint)).Address.ToString() == remoteip.ToString()).FirstOrDefault();
-
-          if (match != null)
-          {
-            connections.Remove(match);
-          }
-         
-        }
-          connections.Add(client);
-          connectionlisteners.Add(handleConnection(client));
-
+        //knownendpoints.Add(endpoint);
+        //var remoteip = endpoint.Address;
         
-
+        connectionlisteners.Add(handleConnection(client));
+  
       }
 
       await Task.WhenAll(connectionlisteners);
 
     }
 
-    static async Task connect(IPAddress ip, int port)
+    static async Task connect(IPAddress ip)
     {
-
-      TcpClient client = new TcpClient();
+      
       try
       {
-        await client.ConnectAsync(ip, port);
-        if (knownips.Add(ip))
+        if (remoteips.Add(ip.ToString()))
         {
-          connections.Add(client);
+          TcpClient client = new TcpClient();
+          await client.ConnectAsync(ip, DEFAULT_PORT);
+          //connections.Add(client);
           connectionlisteners.Add(handleConnection(client));
         }
       }
       catch (Exception e)
       {
         Console.WriteLine("failed to connect with error " + e.Message);
+        remoteips.Remove(ip.ToString());
       }
 
     }
@@ -113,6 +119,7 @@ namespace p2ptcp
         while (true)
         {
           var next = await reader.ReadLineAsync();
+          var chars = next.ToCharArray();
           broadcast(MSG_CODE + name + ": " + next);
         }
       }
@@ -134,63 +141,126 @@ namespace p2ptcp
       var writer = new StreamWriter(stream);
       writer.AutoFlush = true;
       await writer.WriteLineAsync(line);
+      writer.Flush();
+
     }
 
     static async Task handleConnection(TcpClient client)
     {
-      
+
+      int remotelistenport = 0;
       var endpoint = client.Client.RemoteEndPoint as IPEndPoint;
-      var remoteip = endpoint.Address;
-      Console.WriteLine("client connected : " + remoteip.ToString());
+      var remoteipaddress = endpoint.Address.ToString();
+      var stringpoint = endpoint.ToString();
 
-      sendmessage(client, WELCOME_CODE + remoteip.ToString());
+      Console.WriteLine("client connected : " + stringpoint);
 
+      sendmessage(client, WELCOME_CODE + remoteipaddress);
+
+
+      
       var rec = new List<string>();
-      var network = client.GetStream();
       var buffer = new byte[4096];
       int len;
-     
-      while((len = await network.ReadAsync(buffer, 0, 4096))>0)
+
+      var stream = client.GetStream();
+      try
       {
-        var content = System.Text.Encoding.UTF8.GetString(buffer,0,len);
-        rec.Add(content);
-        var code = content[0];
-        var body = content.Substring(1).Trim();
+        var reader = new StreamReader(stream);
+        while(true)
+       // while ((len = await stream.ReadAsync(buffer, 0, 4096)) > 0)
+        {
+          //var content = System.Text.Encoding.UTF8.GetString(buffer, 0, len);
+          var content = await reader.ReadLineAsync();
+          var chars = content.ToCharArray();
 
-        if (!client.Connected)
-        {
-          Console.WriteLine("disconnected..");
-          break;
-        }
 
-        if (code == MSG_CODE)
-        {
-          Console.WriteLine(body);
-        }
-        else if (code == USER_CODE)
-        {
-          var ip = IPAddress.Parse(body);
-          //var match2 = connections.Where(x => ((IPEndPoint)(x.Client.RemoteEndPoint)).Address == ip).FirstOrDefault();
-          if (ip != myipaddress)
+          rec.Add(content);
+          var code = content[0];
+          var body = content.Substring(1).Trim();
+
+          if (!client.Connected)
           {
-            Console.WriteLine("connecting to " + body);
-            connect(ip, DEFAULT_PORT);
+            Console.WriteLine("disconnected..");
+            break;
           }
+
+          if (code == MSG_CODE)
+          {
+            Console.WriteLine(body);
+          }
+          else if (code == USER_CODE)
+          {
+            var split = body.Split(':');
+            //var ip = IPAddress.Parse(body);
+            if (remoteips.Add(split[0])){
+              
+              var ip = IPAddress.Parse(split[0]);
+              var theirport = DEFAULT_PORT;
+              var endpt = new IPEndPoint(ip, theirport);
+              connect(endpoint.Address);
+              //var match2 = connections.Where(x => ((IPEndPoint)(x.Client.RemoteEndPoint)).Address == ip).FirstOrDefault();
+              /*
+              if (endpt.Address != myipaddress.Address && endpt.Port != myipaddress.Port)
+              {
+                Console.WriteLine("learned about: " + body);
+                connect(endpt);
+              }
+               * */
+            }
+          }
+          else if (code == WELCOME_CODE)
+          {
+            sendmessage(client, PORT_CODE + mPort.ToString());
+          }
+          else if (code == PORT_CODE)
+          {
+            remotelistenport = int.Parse(body);
+            string remoteendpoint = endpoint.Address.ToString();// + ":" + DEFAULT_PORT;
+            remoteips.Add(remoteendpoint);
+            broadcast(USER_CODE + remoteendpoint);
+            connections.Add(client);
+            
+          }
+
+          if (code == WELCOME_CODE && mIpAddress == null)
+          {
+            Console.WriteLine("my ip address is : " + body);
+            mIpAddress = body;
+          }
+
         }
-        else if (code == WELCOME_CODE && myipaddress==null)
-        {
-          Console.WriteLine("my ip address is : " + body);
-          myipaddress = IPAddress.Parse(body);
-        }
-        
-        
+
+      }
+      catch (Exception e)
+      {
+
+      }
+      finally
+      {
+        stream.Dispose();
+        Console.WriteLine("client disconnected : " + endpoint.ToString());
+        connections.Remove(client);
+        remoteips.Remove(remoteipaddress);
       }
 
-      Console.WriteLine("client disconnected : " + remoteip.ToString());
-      connections.Remove(client);
-      knownips.Remove(remoteip);
+
+     
 
 
     }
   }
+
+  public class P2pConnection
+  {
+    public TcpClient client { get; set; }
+    public Task listener { get; set; }
+    public int port { get; set; }
+
+    public P2pConnection()
+    {
+
+    }
+  }
+
 }
