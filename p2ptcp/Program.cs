@@ -157,6 +157,12 @@ namespace p2ptcp
         var code = content[0];
         var body = content.Substring(1).Trim();
 
+        if (!client.Connected)
+        {
+          Console.WriteLine("disconnected..");
+          break;
+        }
+
         if (code == MSG_CODE)
         {
           Console.WriteLine(body);
@@ -176,6 +182,7 @@ namespace p2ptcp
           Console.WriteLine("my ip address is : " + body);
           myipaddress = IPAddress.Parse(body);
         }
+        
         
       }
 
