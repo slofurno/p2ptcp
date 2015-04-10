@@ -14,7 +14,7 @@ namespace p2ptcp
 
     static List<TcpClient> connections = new List<TcpClient>();
     static List<Task> connectionlisteners = new List<Task>();
-    static HashSet<string> knownips = new HashSet<string>();
+    static HashSet<IPAddress> knownips = new HashSet<IPAddress>();
     static int DEFAULT_PORT = 1278;
     static string name = "";
     static char MSG_CODE = (char)215;
@@ -24,7 +24,7 @@ namespace p2ptcp
     {
 
       Console.WriteLine(args[0]);
-      Console.WriteLine(args[1]);
+      
       //args : name iptoconnectto
       var tasks = new List<Task>();
 
@@ -34,6 +34,7 @@ namespace p2ptcp
 
       if (args.Length > 1)
       {
+        Console.WriteLine(args[1]);
         var ip = IPAddress.Parse(args[1]);
         //var theirport = int.Parse(args[3]);
         tasks.Add(connect(ip, DEFAULT_PORT));
@@ -103,7 +104,9 @@ namespace p2ptcp
 
     static async Task handleConnection(TcpClient client)
     {
-      var cc = client.Client.RemoteEndPoint;
+      var endpoint = client.Client.RemoteEndPoint as IPEndPoint;
+      var remoteip = endpoint.Address;
+      broadcast(USER_CODE + remoteip.ToString());
 
       var rec = new List<string>();
       var network = client.GetStream();
@@ -115,10 +118,19 @@ namespace p2ptcp
         var content = System.Text.Encoding.UTF8.GetString(buffer,0,len);
         rec.Add(content);
         var code = content[0];
+        var body = content.Substring(1);
 
         if (code == MSG_CODE)
         {
-          Console.Write(content.Substring(1));
+          Console.Write(body);
+        }
+        else if (code == USER_CODE)
+        {
+          var ip = IPAddress.Parse(body);
+          var match = connections.Where(x => ((IPEndPoint)(x.Client.RemoteEndPoint)).Address == ip).FirstOrDefault();
+          if (match == null){
+            connect(ip, DEFAULT_PORT);
+          }
         }
         
       }
