@@ -105,11 +105,10 @@ namespace p2ptcp
       var rec = new List<string>();
       var network = client.GetStream();
       var buffer = new byte[4096];
-      //int len;
-
-      while (true)
+      int len;
+     
+      while((len = await network.ReadAsync(buffer, 0, 4096))>0)
       {
-        var len = await network.ReadAsync(buffer, 0, 4096);
         var content = System.Text.Encoding.UTF8.GetString(buffer,0,len);
         rec.Add(content);
         var code = content[0];
@@ -118,9 +117,9 @@ namespace p2ptcp
         {
           Console.Write(content.Substring(1));
         }
-
         
       }
+      connections.Remove(client);
 
 
     }
