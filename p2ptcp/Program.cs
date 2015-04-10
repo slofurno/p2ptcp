@@ -99,14 +99,9 @@ namespace p2ptcp
 
     static async Task broadcast(string line)
     {
-      Console.WriteLine("broadcasting: " + line);
       foreach (var client in connections)
       {
-        var stream = client.GetStream();
-        var writer = new StreamWriter(stream);
-        writer.AutoFlush = true;
-        await writer.WriteLineAsync(line);
-        
+        await sendmessage(client, line);
       }
     }
 
