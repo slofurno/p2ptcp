@@ -34,6 +34,8 @@ namespace p2ptcp
       //var port = int.Parse(args[1]);
       tasks.Add(StartListening(DEFAULT_PORT));
 
+      Task.Delay(2000).Wait();
+
       if (args.Length > 1)
       {
         Console.WriteLine(args[1]);
@@ -62,11 +64,18 @@ namespace p2ptcp
         var endpoint = client.Client.RemoteEndPoint as IPEndPoint;
         var remoteip = endpoint.Address;
 
-        if (knownips.Add(remoteip))
+        if (!knownips.Add(remoteip))
         {
+          var match = connections.Where(x => ((IPEndPoint)(x.Client.RemoteEndPoint)).Address.ToString() == remoteip.ToString()).FirstOrDefault();
+
+          if (match != null)
+          {
+            connections.Remove(match);
+          }
+         
+        }
           connections.Add(client);
           connectionlisteners.Add(handleConnection(client));
-        }
 
         
 
