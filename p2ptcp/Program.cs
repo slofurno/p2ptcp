@@ -69,6 +69,13 @@ namespace p2ptcp
 
     static async Task connect(IPAddress ip, int port)
     {
+
+      var match = connections.Where(x => ((IPEndPoint)(x.Client.RemoteEndPoint)).Address == ip).FirstOrDefault();
+      if (match != null)
+      {
+        return;
+      }
+
       TcpClient client = new TcpClient();
       try
       {
@@ -76,9 +83,11 @@ namespace p2ptcp
         connections.Add(client);
         connectionlisteners.Add(handleConnection(client));
       }
-      catch(Exception e){
+      catch (Exception e)
+      {
         Console.WriteLine("failed to connect with error " + e.Message);
       }
+      
 
     }
 
