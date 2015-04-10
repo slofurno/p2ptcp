@@ -191,10 +191,10 @@ namespace p2ptcp
           else if (code == USER_CODE)
           {
             //var ip = IPAddress.Parse(body);
-            if (mIpAddress!=body && remoteips.Add(body)){
-              
+            if (mIpAddress!=body){
+              Console.WriteLine("learned about user at ip : " + body);
               var ip = IPAddress.Parse(body);
-              connect(ip);
+              await connect(ip);
          
             }
           }
