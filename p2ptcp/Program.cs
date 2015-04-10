@@ -61,7 +61,7 @@ namespace p2ptcp
 
         var endpoint = client.Client.RemoteEndPoint as IPEndPoint;
         var remoteip = endpoint.Address;
-        var match = connections.Where(x => ((IPEndPoint)(x.Client.RemoteEndPoint)).Address.Equals(remoteip)).FirstOrDefault();
+        var match = connections.Where(x => ((IPEndPoint)(x.Client.RemoteEndPoint)).Address.ToString()==remoteip.ToString()).FirstOrDefault();
         if (match != null)
         {
           continue;
@@ -79,7 +79,7 @@ namespace p2ptcp
     static async Task connect(IPAddress ip, int port)
     {
 
-      var match = connections.Where(x => ((IPEndPoint)(x.Client.RemoteEndPoint)).Address.Equals(ip)).FirstOrDefault();
+      var match = connections.Where(x => ((IPEndPoint)(x.Client.RemoteEndPoint)).Address.ToString()==ip.ToString()).FirstOrDefault();
       if (match != null)
       {
         return;
