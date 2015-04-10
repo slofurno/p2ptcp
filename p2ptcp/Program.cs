@@ -155,6 +155,7 @@ namespace p2ptcp
         }
         else if (code == WELCOME_CODE)
         {
+          Console.WriteLine("my ip address is : " + body);
           myipaddress = IPAddress.Parse(body);
         }
         
