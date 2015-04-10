@@ -1,0 +1,6 @@
+C:\dev\csharp\p2ptcp\p2ptcp\bin\Debug\p2ptcp.exe.config
+C:\dev\csharp\p2ptcp\p2ptcp\bin\Debug\p2ptcp.exe
+C:\dev\csharp\p2ptcp\p2ptcp\bin\Debug\p2ptcp.pdb
+C:\dev\csharp\p2ptcp\p2ptcp\obj\Debug\p2ptcp.csprojResolveAssemblyReference.cache
+C:\dev\csharp\p2ptcp\p2ptcp\obj\Debug\p2ptcp.exe
+C:\dev\csharp\p2ptcp\p2ptcp\obj\Debug\p2ptcp.pdb
