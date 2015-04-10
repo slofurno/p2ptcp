@@ -31,7 +31,7 @@ namespace p2ptcp
 
       if (args.Length > 1)
       {
-        var ip = IPAddress.Parse(args[2]);
+        var ip = IPAddress.Parse(args[1]);
         //var theirport = int.Parse(args[3]);
         tasks.Add(connect(ip, DEFAULT_PORT));
       }
@@ -42,8 +42,8 @@ namespace p2ptcp
     static async Task StartListening(int port)
     {
 
-      IPAddress ipAddress = IPAddress.Parse("127.0.0.1");
-      TcpListener listener = new TcpListener(ipAddress, port);
+      //IPAddress ipAddress = IPAddress.Parse("127.0.0.1");
+      TcpListener listener = new TcpListener(IPAddress.Any, port);
       var input = readconsoleinput();
 
       listener.Start();
