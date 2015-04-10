@@ -41,9 +41,9 @@ namespace p2ptcp
       mPort = myport;
       tasks.Add(StartListening(myport));
 
-      if (args.Length > 2)
+      if (args.Length > 1)
       {
-        var ipendpoint = args[2];
+        var ipendpoint = args[1];
 
         Task.Delay(100).Wait();
 
