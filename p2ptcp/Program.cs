@@ -92,6 +92,7 @@ namespace p2ptcp
 
     static async Task broadcast(string line)
     {
+      Console.WriteLine("broadcasting: " + line);
       foreach (var conn in connections)
       {
         var stream = conn.GetStream();
