@@ -15,10 +15,12 @@ namespace p2ptcp
     static List<TcpClient> connections = new List<TcpClient>();
     static List<Task> connectionlisteners = new List<Task>();
     static HashSet<IPAddress> knownips = new HashSet<IPAddress>();
+    static IPAddress myipaddress;
     static int DEFAULT_PORT = 1278;
     static string name = "";
     static char MSG_CODE = (char)215;
     static char USER_CODE = (char)216;
+    static char WELCOME_CODE = (char)217;
 
     static void Main(string[] args)
     {
@@ -93,9 +95,9 @@ namespace p2ptcp
     static async Task broadcast(string line)
     {
       Console.WriteLine("broadcasting: " + line);
-      foreach (var conn in connections)
+      foreach (var client in connections)
       {
-        var stream = conn.GetStream();
+        var stream = client.GetStream();
         var writer = new StreamWriter(stream);
         writer.AutoFlush = true;
         await writer.WriteLineAsync(line);
@@ -103,15 +105,27 @@ namespace p2ptcp
       }
     }
 
+    static async Task sendmessage(TcpClient client, string line)
+    {
+      var stream = client.GetStream();
+      var writer = new StreamWriter(stream);
+      writer.AutoFlush = true;
+      await writer.WriteLineAsync(line);
+    }
+
     static async Task handleConnection(TcpClient client)
     {
+      
       var endpoint = client.Client.RemoteEndPoint as IPEndPoint;
       var remoteip = endpoint.Address;
+      /*
       var match = connections.Where(x => ((IPEndPoint)(x.Client.RemoteEndPoint)).Address == remoteip).FirstOrDefault();
       if (match == null)
       {
         broadcast(USER_CODE + remoteip.ToString());
       }
+      */
+      sendmessage(client, WELCOME_CODE + remoteip.ToString());
 
       var rec = new List<string>();
       var network = client.GetStream();
@@ -132,11 +146,16 @@ namespace p2ptcp
         else if (code == USER_CODE)
         {
           var ip = IPAddress.Parse(body);
-          var match2 = connections.Where(x => ((IPEndPoint)(x.Client.RemoteEndPoint)).Address == ip).FirstOrDefault();
-          if (match2 == null){
+          //var match2 = connections.Where(x => ((IPEndPoint)(x.Client.RemoteEndPoint)).Address == ip).FirstOrDefault();
+          if (ip != myipaddress)
+          {
             Console.WriteLine("connecting to " + body);
             connect(ip, DEFAULT_PORT);
           }
+        }
+        else if (code == WELCOME_CODE)
+        {
+          myipaddress = IPAddress.Parse(body);
         }
         
       }
