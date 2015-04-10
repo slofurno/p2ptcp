@@ -106,7 +106,11 @@ namespace p2ptcp
     {
       var endpoint = client.Client.RemoteEndPoint as IPEndPoint;
       var remoteip = endpoint.Address;
-      broadcast(USER_CODE + remoteip.ToString());
+      var match = connections.Where(x => ((IPEndPoint)(x.Client.RemoteEndPoint)).Address == remoteip).FirstOrDefault();
+      if (match == null)
+      {
+        broadcast(USER_CODE + remoteip.ToString());
+      }
 
       var rec = new List<string>();
       var network = client.GetStream();
@@ -118,17 +122,17 @@ namespace p2ptcp
         var content = System.Text.Encoding.UTF8.GetString(buffer,0,len);
         rec.Add(content);
         var code = content[0];
-        var body = content.Substring(1);
+        var body = content.Substring(1).Trim();
 
         if (code == MSG_CODE)
         {
-          Console.Write(body);
+          Console.WriteLine(body);
         }
         else if (code == USER_CODE)
         {
           var ip = IPAddress.Parse(body);
-          var match = connections.Where(x => ((IPEndPoint)(x.Client.RemoteEndPoint)).Address == ip).FirstOrDefault();
-          if (match == null){
+          var match2 = connections.Where(x => ((IPEndPoint)(x.Client.RemoteEndPoint)).Address == ip).FirstOrDefault();
+          if (match2 == null){
             Console.WriteLine("connecting to " + body);
             connect(ip, DEFAULT_PORT);
           }
