@@ -14,8 +14,6 @@ namespace p2ptcp
 
     static List<TcpClient> connections = new List<TcpClient>();
     static List<Task> connectionlisteners = new List<Task>();
-    //static HashSet<IPEndPoint> knownendpoints = new HashSet<IPEndPoint>();
-    //static IPEndPoint myipaddress;
 
     static HashSet<string>remoteips = new HashSet<string>();
     static int DEFAULT_PORT = 1278;
@@ -23,7 +21,6 @@ namespace p2ptcp
     static char MSG_CODE = (char)215;
     static char USER_CODE = (char)216;
     static char WELCOME_CODE = (char)217;
-    static char PORT_CODE = (char)218;
     static int mPort = 0;
     static string mIpAddress;
 
@@ -32,48 +29,43 @@ namespace p2ptcp
 
       Console.WriteLine(args[0]);
       
-      //args : name iptoconnectto
-      var tasks = new List<Task>();
+      var startupTasks = new List<Task>();
 
       name = args[0];
 
-      var myport = DEFAULT_PORT;//int.Parse(args[1]);
-      mPort = myport;
-      tasks.Add(StartListening(myport));
+      mPort = DEFAULT_PORT;
+      startupTasks.Add(StartListening(DEFAULT_PORT));
 
       if (args.Length > 1)
       {
         var ipendpoint = args[1];
-
-        Task.Delay(100).Wait();
         var ip = IPAddress.Parse(ipendpoint);
-
-        tasks.Add(connect(ip));
+        startupTasks.Add(connect(ip));
       }
 
-      Task.WhenAll(tasks).Wait();
+      Task.WhenAll(startupTasks).Wait();
     }
 
     static async Task StartListening(int port)
     {
-
-      //IPAddress ipAddress = IPAddress.Parse("127.0.0.1");
+      //listen on whatever ip address you can, on our default port.
       TcpListener listener = new TcpListener(IPAddress.Any, port);
+      
+      //a task which we don't await, which sits in the background and waits for your inputs. 
       var input = readconsoleinput();
 
       listener.Start();
 
       while (true) 
       {
-
         var client = await listener.AcceptTcpClientAsync().ConfigureAwait(false);
 
         var endpoint = client.Client.RemoteEndPoint as IPEndPoint;
-        //knownendpoints.Add(endpoint);
         var remoteip = endpoint.Address;
+
+        //if you are already connected to this ip, don't connect again. 
         if (remoteips.Add(remoteip.ToString()))
         {
-
           connectionlisteners.Add(handleConnection(client));
         }
         else
@@ -82,16 +74,15 @@ namespace p2ptcp
         }
   
       }
-
+      //you will never get here, but if you did, it would wait for all your connections to close.
       await Task.WhenAll(connectionlisteners);
-
     }
 
     static async Task connect(IPAddress ip)
     {
-      
       try
       {
+        //if we arent already connected to this user, connect
         if (remoteips.Add(ip.ToString()))
         {
           TcpClient client = new TcpClient();
@@ -112,17 +103,17 @@ namespace p2ptcp
     static async Task readconsoleinput()
     {
       using (var input = Console.OpenStandardInput())
+      //interpret the console input stream as a text stream
       using (var reader = new StreamReader(input))
       {
         while (true)
         {
+          //yield control until you enter another line of input
           var next = await reader.ReadLineAsync();
-          var chars = next.ToCharArray();
+          //fire and forget this broadcast task
           broadcast(MSG_CODE + name + ": " + next);
         }
       }
-
-
     }
 
     static async Task broadcast(string line)
@@ -133,12 +124,15 @@ namespace p2ptcp
       }
     }
 
+    //every message will have a code appended to the beginning of it, so the receiever knows what kind of message it is.
     static async Task sendmessage(TcpClient client, string line)
     {
+      //cant wrap this in using block, cause disposing of the underlying stream would end our connection
       var stream = client.GetStream();
       var writer = new StreamWriter(stream);
       writer.AutoFlush = true;
       await writer.WriteLineAsync(line);
+      //prolly dont need this and autoflush
       writer.Flush();
 
     }
@@ -146,35 +140,28 @@ namespace p2ptcp
     static async Task handleConnection(TcpClient client)
     {
 
-      int remotelistenport = 0;
       var endpoint = client.Client.RemoteEndPoint as IPEndPoint;
       var remoteipaddress = endpoint.Address.ToString();
 
       Console.WriteLine("client connected : " + remoteipaddress);
 
+      //there is no way to know your own ip address, so we kindly welcome each user who connects and tell them what their ip address looks like to us.
       await sendmessage(client, WELCOME_CODE + remoteipaddress);
 
+      //we then share their ip address with everyone we're already connected to, so they can also connect to them
       await broadcast(USER_CODE + remoteipaddress);
-
       connections.Add(client);
-
-      var rec = new List<string>();
-      var buffer = new byte[4096];
-      int len;
-
       var stream = client.GetStream();
+
+      //typically you know end of stream when you read a byte length of 0, but this didn't seem to be the case on ubuntu, so i found it more consistent to do it like this.
       try
       {
         var reader = new StreamReader(stream);
         while(true)
-       // while ((len = await stream.ReadAsync(buffer, 0, 4096)) > 0)
         {
-          //var content = System.Text.Encoding.UTF8.GetString(buffer, 0, len);
           var content = await reader.ReadLineAsync();
           var chars = content.ToCharArray();
 
-
-          rec.Add(content);
           var code = content[0];
           var body = content.Substring(1).Trim();
 
@@ -188,70 +175,39 @@ namespace p2ptcp
           {
             Console.WriteLine(body);
           }
+          //user code means someone is sharing another user's connection info with us. if we don't have them, we will connect
           else if (code == USER_CODE)
           {
-            //var ip = IPAddress.Parse(body);
             if (mIpAddress!=body){
               Console.WriteLine("learned about user at ip : " + body);
               var ip = IPAddress.Parse(body);
               await connect(ip);
-         
             }
           }
-          else if (code == WELCOME_CODE)
-          {
-            //sendmessage(client, PORT_CODE + mPort.ToString());
-          }
-          else if (code == PORT_CODE)
-          {
-            /*
-            remotelistenport = int.Parse(body);
-            string remoteendpoint = endpoint.Address.ToString();// + ":" + DEFAULT_PORT;
-            remoteips.Add(remoteendpoint);
-            broadcast(USER_CODE + remoteendpoint);
-            connections.Add(client);
-             * */
-            
-          }
-
-          if (code == WELCOME_CODE && mIpAddress == null)
+          //after you connect to someone, they respond with a welcome message containing your ip address
+          else if (code == WELCOME_CODE && mIpAddress == null)
           {
             Console.WriteLine("my ip address is : " + body);
             mIpAddress = body;
           }
-
         }
 
       }
       catch (Exception e)
       {
-
+        //this might not be the best way of handling this, but its the only way i could get it to work on windows + linux
       }
       finally
       {
+        //when our while loop is broken, we come here and dispose our connection, and do some bookkeeping
         stream.Dispose();
         Console.WriteLine("client disconnected : " + endpoint.ToString());
         connections.Remove(client);
         remoteips.Remove(remoteipaddress);
       }
 
-
-     
-
-
     }
   }
 
-  public class P2pConnection
-  {
-    public TcpClient client { get; set; }
-    public Task listener { get; set; }
-    public int port { get; set; }
-
-    public P2pConnection()
-    {
-
-    }
-  }
 
 }
