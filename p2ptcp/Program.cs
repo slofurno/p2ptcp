@@ -71,9 +71,15 @@ namespace p2ptcp
         var endpoint = client.Client.RemoteEndPoint as IPEndPoint;
         //knownendpoints.Add(endpoint);
         var remoteip = endpoint.Address;
-        remoteips.Add(remoteip.ToString());
-        
-        connectionlisteners.Add(handleConnection(client));
+        if (remoteips.Add(remoteip.ToString()))
+        {
+
+          connectionlisteners.Add(handleConnection(client));
+        }
+        else
+        {
+          client.Close();
+        }
   
       }
 
@@ -146,9 +152,9 @@ namespace p2ptcp
 
       Console.WriteLine("client connected : " + remoteipaddress);
 
-      sendmessage(client, WELCOME_CODE + remoteipaddress);
+      await sendmessage(client, WELCOME_CODE + remoteipaddress);
 
-      broadcast(USER_CODE + remoteipaddress);
+      await broadcast(USER_CODE + remoteipaddress);
 
       connections.Add(client);
 
