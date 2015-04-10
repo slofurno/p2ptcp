@@ -79,20 +79,19 @@ namespace p2ptcp
     static async Task connect(IPAddress ip, int port)
     {
 
-      if (knownips.Add(ip))
+      TcpClient client = new TcpClient();
+      try
       {
-
-        TcpClient client = new TcpClient();
-        try
+        await client.ConnectAsync(ip, port);
+        if (knownips.Add(ip))
         {
-          await client.ConnectAsync(ip, port);
           connections.Add(client);
           connectionlisteners.Add(handleConnection(client));
         }
-        catch (Exception e)
-        {
-          Console.WriteLine("failed to connect with error " + e.Message);
-        }
+      }
+      catch (Exception e)
+      {
+        Console.WriteLine("failed to connect with error " + e.Message);
       }
 
     }
