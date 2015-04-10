@@ -123,6 +123,7 @@ namespace p2ptcp
       
       var endpoint = client.Client.RemoteEndPoint as IPEndPoint;
       var remoteip = endpoint.Address;
+      Console.WriteLine("client connected : " + remoteip.ToString());
       /*
       var match = connections.Where(x => ((IPEndPoint)(x.Client.RemoteEndPoint)).Address == remoteip).FirstOrDefault();
       if (match == null)
@@ -158,13 +159,15 @@ namespace p2ptcp
             connect(ip, DEFAULT_PORT);
           }
         }
-        else if (code == WELCOME_CODE)
+        else if (code == WELCOME_CODE && myipaddress==null)
         {
           Console.WriteLine("my ip address is : " + body);
           myipaddress = IPAddress.Parse(body);
         }
         
       }
+
+      Console.WriteLine("client disconnected : " + remoteip.ToString());
       connections.Remove(client);
 
 
