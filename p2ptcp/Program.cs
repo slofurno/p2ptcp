@@ -61,14 +61,14 @@ namespace p2ptcp
 
         var endpoint = client.Client.RemoteEndPoint as IPEndPoint;
         var remoteip = endpoint.Address;
-        var match = connections.Where(x => ((IPEndPoint)(x.Client.RemoteEndPoint)).Address.ToString()==remoteip.ToString()).FirstOrDefault();
-        if (match != null)
+
+        if (knownips.Add(remoteip))
         {
-          continue;
+          connections.Add(client);
+          connectionlisteners.Add(handleConnection(client));
         }
 
-        connections.Add(client);
-        connectionlisteners.Add(handleConnection(client));
+        
 
       }
 
@@ -79,24 +79,21 @@ namespace p2ptcp
     static async Task connect(IPAddress ip, int port)
     {
 
-      var match = connections.Where(x => ((IPEndPoint)(x.Client.RemoteEndPoint)).Address.ToString()==ip.ToString()).FirstOrDefault();
-      if (match != null)
+      if (knownips.Add(ip))
       {
-        return;
-      }
 
-      TcpClient client = new TcpClient();
-      try
-      {
-        client.Connect(ip, port);
-        connections.Add(client);
-        connectionlisteners.Add(handleConnection(client));
+        TcpClient client = new TcpClient();
+        try
+        {
+          await client.ConnectAsync(ip, port);
+          connections.Add(client);
+          connectionlisteners.Add(handleConnection(client));
+        }
+        catch (Exception e)
+        {
+          Console.WriteLine("failed to connect with error " + e.Message);
+        }
       }
-      catch (Exception e)
-      {
-        Console.WriteLine("failed to connect with error " + e.Message);
-      }
-      
 
     }
 
@@ -137,13 +134,7 @@ namespace p2ptcp
       var endpoint = client.Client.RemoteEndPoint as IPEndPoint;
       var remoteip = endpoint.Address;
       Console.WriteLine("client connected : " + remoteip.ToString());
-      /*
-      var match = connections.Where(x => ((IPEndPoint)(x.Client.RemoteEndPoint)).Address == remoteip).FirstOrDefault();
-      if (match == null)
-      {
-        broadcast(USER_CODE + remoteip.ToString());
-      }
-      */
+
       sendmessage(client, WELCOME_CODE + remoteip.ToString());
 
       var rec = new List<string>();
@@ -182,6 +173,7 @@ namespace p2ptcp
 
       Console.WriteLine("client disconnected : " + remoteip.ToString());
       connections.Remove(client);
+      knownips.Remove(remoteip);
 
 
     }
